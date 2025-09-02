@@ -2,7 +2,7 @@ import cv2
 import numpy as np
 
 # ---- Load Image ----
-img = cv2.imread("images/shadow_side.jpg")
+img = cv2.imread("images/10388.jpg")
 gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
 
 # ---- Step 1: Adaptive Threshold ----
