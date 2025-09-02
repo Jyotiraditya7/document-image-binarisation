@@ -6,6 +6,8 @@ gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)                # convert to graysca
 
 clahe = cv2.createCLAHE(clipLimit=3.0, tileGridSize=(8, 8))  # makes text strokes more visible
 gray_eq = clahe.apply(gray)
+cv2.imshow("0",gray_eq)
+cv2.waitKey(0)
 
 kernel = cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (25, 25))    # Morphological closing (dilation + erosion)
 bg = cv2.morphologyEx(gray_eq, cv2.MORPH_CLOSE, kernel)
@@ -18,8 +20,7 @@ cv2.waitKey(0)
 
 _, rough_thresh = cv2.threshold(norm_img, 0, 255, cv2.THRESH_BINARY + cv2.THRESH_OTSU)  # Global Otsu thresholding
 
-contours, _ = cv2.findContours(rough_thresh, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE) # gives candidate text blobs
-
+contours, _ = cv2.findContours(rough_thresh, cv2.RETR_LIST, cv2.CHAIN_APPROX_NONE) # gives candidate text blobs
 
 
 
@@ -42,7 +43,8 @@ for cnt in contours:
     k = k if k % 2 == 1 else k + 1
 
     local_bin = cv2.adaptiveThreshold(roi, 255, cv2.ADAPTIVE_THRESH_MEAN_C,    # Apply adaptive threshold with dynamic block size k
-                                      cv2.THRESH_BINARY, k, 10)
+                                      cv2.THRESH_BINARY_INV, k, 10)
+                                      
 
     formatted[y:y+h, x:x+w] = local_bin                                 # replace ROI
 
@@ -72,9 +74,7 @@ cv2.waitKey(0)
 
 
 
-
-
-contours, _ = cv2.findContours(adaptive_closed, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)  # Find contours again
+contours, _ = cv2.findContours(closed_image, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)  # Find contours again
 
 merged_boxes = []
 line_tolerance = 30                 # vertical tolerance
@@ -120,63 +120,3 @@ cv2.waitKey(0)
 
 
 
-# ---------------------------------------------------------------------------------
-
-
-
-
-
-# OUTLIER REMOVAL (SPATIAL CLUSTER)
-
-cleaned_boxes = merged_boxes[:]
-n = len(merged_boxes)
-if n > 0:
-    centers = np.array([[(x1 + x2) // 2, (y1 + y2) // 2] for (x1, y1, x2, y2) in merged_boxes])
-
-    heights = np.array([(y2 - y1) for (x1, y1, x2, y2) in merged_boxes])        # Compute centers and heights of boxes
-
-    R = int(max(20, np.median(heights) * 4.0))
-    R2 = R * R                                               # radius for neighborhood
-
-    adj = [[] for _ in range(n)]
-    for i in range(n):
-        for j in range(i + 1, n):
-            dx = centers[i, 0] - centers[j, 0]
-            dy = centers[i, 1] - centers[j, 1]
-            if dx * dx + dy * dy <= R2:
-                adj[i].append(j)                            # Boxes within radius R are considered connected
-                adj[j].append(i)
-
-    visited = np.zeros(n, dtype=bool)
-    components = []
-    for i in range(n):
-        if not visited[i]:
-            stack = [i]
-            visited[i] = True
-            comp = [i]
-            while stack:
-                u = stack.pop()
-                for v in adj[u]:                            # Find connected components of boxes using DFS
-                    if not visited[v]:
-                        visited[v] = True
-                        stack.append(v)
-                        comp.append(v)
-            components.append(comp)
-
-    if components:
-        largest = max(components, key=len)
-        keep = set(largest)
-        cleaned_boxes = [merged_boxes[i] for i in range(n) if i in keep]
-
-
-
-
-
-output = img.copy()
-for x1, y1, x2, y2 in cleaned_boxes:
-    cv2.rectangle(output, (x1, y1), (x2, y2), (0, 0, 0), 10)
-
-cv2.imshow("5. Final Merged Contours (Outliers Removed)", output)       # Draw Final Merged Boxes
-
-cv2.waitKey(0)
-cv2.destroyAllWindows()
