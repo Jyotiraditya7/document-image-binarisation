@@ -21,6 +21,8 @@ _, rough_thresh = cv2.threshold(norm_img, 0, 255, cv2.THRESH_BINARY + cv2.THRESH
 contours, _ = cv2.findContours(rough_thresh, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE) # gives candidate text blobs
 
 
+
+
 formatted = np.zeros_like(gray)
 for cnt in contours:
     x, y, w, h = cv2.boundingRect(cnt)
@@ -47,6 +49,10 @@ for cnt in contours:
 cv2.imshow("2. Adaptive Local Binarization", formatted)
 cv2.waitKey(0)
 
+
+
+
+
 contours, _ = cv2.findContours(formatted, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)  # Find contours again from the refined binarized image.
 
 adaptive_closed = formatted.copy()
@@ -63,6 +69,10 @@ for cnt in contours:
 
 cv2.imshow("3. Adaptive Morph Closing", adaptive_closed)
 cv2.waitKey(0)
+
+
+
+
 
 contours, _ = cv2.findContours(adaptive_closed, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)  # Find contours again
 
