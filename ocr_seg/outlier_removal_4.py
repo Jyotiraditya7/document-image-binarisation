@@ -46,7 +46,7 @@ for cnt in contours:
                                       cv2.THRESH_BINARY_INV, k, 10)
                                       
 
-    formatted[y:y+h, x:x+w] = local_bin                                 # replace ROI
+    formatted[y:y+h, x:x+w] = norm_img[y:y+h, x:x+w]                                 # replace ROI
 
 cv2.imshow("2. Adaptive Local Binarization", formatted)
 cv2.waitKey(0)

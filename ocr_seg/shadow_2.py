@@ -2,7 +2,7 @@ import cv2
 import numpy as np
 
 # Load and preprocess image (same as before)
-img = cv2.imread('images/slant.jpg')
+img = cv2.imread('images/shadow_side.jpg')
 gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
 
 clahe = cv2.createCLAHE(clipLimit=3.0, tileGridSize=(8,8))

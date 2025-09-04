@@ -116,7 +116,7 @@ def split_box_by_vproj(bin_img_full, box, min_gap_pixels=8, valley_frac=0.08):
         return [box]
     return subboxes
 
--
+
 final_boxes = []
 for (r1, r2) in rows:
     # crop one row band (add small padding vertically to capture diacritics)
