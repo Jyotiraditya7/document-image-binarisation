@@ -58,9 +58,11 @@ shape_map = {
 kernel = cv2.getStructuringElement(shape_map[shape], ksize)
 
 
-closed = cv2.morphologyEx(refined, cv2.MORPH_CLOSE, kernel, iterations=iterations)
+dilated = cv2.dilate(refined, kernel, iterations=iterations)
 
 
-cv2.imshow(f"Closing (shape={shape}, size={ksize}, iter={iterations})", closed)
+closed_manual = cv2.erode(dilated, kernel, iterations=iterations)
+
+cv2.imshow("Manual Closing", closed_manual)
 cv2.waitKey(0)
 cv2.destroyAllWindows()
