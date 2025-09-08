@@ -1,7 +1,7 @@
 import cv2
 import numpy as np
 
-img = cv2.imread('images/10388.jpg')
+img = cv2.imread('images/shadow_bottom.jpg')
 gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)                # convert to grayscale
 
 clahe = cv2.createCLAHE(clipLimit=3.0, tileGridSize=(8, 8))  # makes text strokes more visible
@@ -20,8 +20,11 @@ cv2.waitKey(0)
 
 blurred = cv2.GaussianBlur(norm_img, (5,5), 0)
 
+cv2.imshow("2. Blurred Image", blurred)
+cv2.waitKey(0)
+
 _, binarized_img = cv2.threshold(
-    blurred, 0, 255, cv2.THRESH_BINARY + cv2.THRESH_OTSU
+    norm_img, 0, 255, cv2.THRESH_BINARY + cv2.THRESH_OTSU
 )
 
 cv2.imshow("Binarized Image (Global)", binarized_img)
@@ -65,4 +68,23 @@ closed_manual = cv2.erode(dilated, kernel, iterations=iterations)
 
 cv2.imshow("Manual Closing", closed_manual)
 cv2.waitKey(0)
+
+
+num_labels, labels, stats, centroids = cv2.connectedComponentsWithStats(closed_manual, connectivity=8)
+
+output = cv2.cvtColor(closed_manual, cv2.COLOR_GRAY2BGR)
+
+min_area = 1000
+word_id = 0
+
+for i in range(1, num_labels):
+    x, y, w, h, area = stats[i]
+    if area >= min_area:
+        cv2.rectangle(output, (x, y), (x + w, y + h), (0, 255, 0), 2)
+        word_crop = closed_manual[y:y+h, x:x+w]
+        word_id += 1
+
+cv2.imshow("Word Boxes (Connected Components)", output)
+cv2.waitKey(0)
 cv2.destroyAllWindows()
+
