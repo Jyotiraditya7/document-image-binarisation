@@ -1,17 +1,17 @@
 import cv2
 
-myImage = cv2.imread('images/shadow_side.jpg')  # Replace with your file path
+myImage = cv2.imread('images/shadow_side.jpg')
 cv2.imshow('Original Image', myImage)
 cv2.waitKey(0)
 
-# Convert to Grayscale
+
 grayImg = cv2.cvtColor(myImage, cv2.COLOR_BGR2GRAY)
 cv2.imshow("Gray", grayImg)
 cv2.waitKey(0)
 
 blurred = cv2.GaussianBlur(grayImg, (5, 5), 0)
 
-# Apply general threshold using otsu's method
+
 ret, thresh = cv2.threshold(blurred, 0, 255, cv2.THRESH_OTSU | cv2.THRESH_BINARY_INV)
 
 # Morphological operation

@@ -1,7 +1,7 @@
 import cv2
 import numpy as np
 
-# Load and preprocess image (same as before)
+
 img = cv2.imread('images/shadow_side.jpg')
 gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
 
@@ -16,16 +16,14 @@ norm_img = cv2.normalize(diff, None, 0, 255, cv2.NORM_MINMAX)
 cv2.imshow("Shadow Removed", norm_img)
 cv2.waitKey(0)
 
-# Otsu will automatically find a good threshold
+
 _, light_thresh = cv2.threshold(norm_img, 0, 255, cv2.THRESH_BINARY + cv2.THRESH_OTSU)
 cv2.imshow("Light Threshold (Otsu)", light_thresh)
 cv2.waitKey(0)
 
 
-# ----- Contour Detection -----
 contours, _ = cv2.findContours(light_thresh, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
 
-# Draw boxes on original image
 output = img.copy()
 for cnt in contours:
     x, y, w, h = cv2.boundingRect(cnt)

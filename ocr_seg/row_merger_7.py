@@ -3,7 +3,6 @@ import numpy as np
 from sklearn.cluster import DBSCAN
 
 def preprocess_image(img_path):
-    """Your preprocessing pipeline - works well"""
     img = cv2.imread(img_path)
     gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
     clahe = cv2.createCLAHE(clipLimit=3.0, tileGridSize=(8,8))
@@ -21,7 +20,6 @@ def preprocess_image(img_path):
     return img, binary
 
 def detect_lines_dbscan(binary_img):
-    """Your DBSCAN line detection - keep this as is"""
     # Find contours
     contours, _ = cv2.findContours(binary_img, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
     
@@ -58,7 +56,6 @@ def detect_lines_dbscan(binary_img):
     return line_regions
 
 def segment_words_in_line(binary_img, line_bounds):
-    """Segment words within a detected line using vertical projection"""
     y1, y2 = line_bounds
     
     # Add small padding to capture diacritics
@@ -111,7 +108,6 @@ def segment_words_in_line(binary_img, line_bounds):
     return word_regions
 
 def refine_word_boxes(binary_img, word_regions):
-    """Refine word boxes by finding actual content boundaries"""
     refined_boxes = []
     
     for x1, y1, x2, y2 in word_regions:
@@ -154,7 +150,6 @@ def refine_word_boxes(binary_img, word_regions):
     return refined_boxes
 
 def split_wide_words(binary_img, word_boxes, max_width_ratio=6):
-    """Split words that are too wide (likely merged words)"""
     final_boxes = []
     
     for x1, y1, x2, y2 in word_boxes:
