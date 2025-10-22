@@ -17,11 +17,11 @@ def smooth_list(arr, kernel=3):
     return sm
 
 def compute_band_kernel_sizes(stats, centroids, img_h,
-                              num_bands=40,
-                              area_thresh=30,
-                              scale_factor=0.55,
-                              min_k=3, max_k=101,
-                              density_shrink_coeff=0.6):
+                              num_bands,
+                              area_thresh,
+                              scale_factor,
+                              min_k, max_k,
+                              density_shrink_coeff):
     comp_heights = []
     comp_centroids_y = []
     n = stats.shape[0]
