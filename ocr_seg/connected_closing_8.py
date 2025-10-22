@@ -24,7 +24,7 @@ cv2.imshow("2. Blurred Image", blurred)
 cv2.waitKey(0)
 
 _, binarized_img = cv2.threshold(
-    norm_img, 0, 255, cv2.THRESH_BINARY + cv2.THRESH_OTSU
+    blurred, 0, 255, cv2.THRESH_BINARY + cv2.THRESH_OTSU
 )
 
 cv2.imshow("Binarized Image (Global)", binarized_img)
