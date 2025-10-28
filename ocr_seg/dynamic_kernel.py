@@ -7,15 +7,6 @@ def oddize(x):
         return 3
     return x if x % 2 == 1 else x + 1
 
-def smooth_list(arr, kernel=3):
-    if kernel <= 1:
-        return np.array(arr, dtype=float)
-    k = np.ones(kernel) / kernel
-    pad = kernel // 2
-    a = np.pad(arr, pad, mode='edge')
-    sm = np.convolve(a, k, mode='valid')
-    return sm
-
 def compute_band_kernel_sizes(stats, centroids, img_h,
                               num_bands,
                               area_thresh,
@@ -103,7 +94,7 @@ def dynamic_closing_by_bands(gray_img, band_kernel_sizes, overlap=0.30):
 
 
 def main():
-    image_path = "images/shadow_bottom.jpg"
+    image_path = "images/shadow_side.jpg"
     img = cv2.imread(image_path)
     if img is None:
         raise SystemExit(f"Failed to read '{image_path}' — check file path.")
@@ -113,7 +104,6 @@ def main():
 
     num_bands = max(10, min(100, h // 20))
 
-    # CLAHE
     clahe = cv2.createCLAHE(clipLimit=3.0, tileGridSize=(8, 8))
     gray_eq = clahe.apply(gray)
     cv2.imshow("0. CLAHE", gray_eq); cv2.waitKey(0)
@@ -125,23 +115,20 @@ def main():
     cv2.imshow("1. Shadow Removed (norm)", norm_img)
     cv2.waitKey(0)
 
-    # Smooth + binarize
     blurred = cv2.GaussianBlur(norm_img, (5, 5), 0)
     _, binarized = cv2.threshold(blurred, 0, 255, cv2.THRESH_BINARY + cv2.THRESH_OTSU)
     cv2.imshow("2. Binarized (OTSU)", binarized); cv2.waitKey(0)
 
-    # Small open
     small_k = cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (3, 3))
     binarized = cv2.morphologyEx(binarized, cv2.MORPH_OPEN, small_k)
 
-    # Connected components
     num_labels, labels, stats, centroids = cv2.connectedComponentsWithStats(binarized, connectivity=8)
 
-    # Adaptive area threshold
+
     median_area = np.median(stats[1:, cv2.CC_STAT_AREA])
     area_thresh = max(5, median_area * 0.05)
 
-    # Adaptive scale factor based on median height
+
     median_height = np.median(stats[1:, cv2.CC_STAT_HEIGHT])
     scale_factor = min(0.8, max(0.3, median_height / 50.0))
 
@@ -151,20 +138,21 @@ def main():
     overlap = 0.30
     min_area_keep = max(500, median_area * 0.5)
 
-    # Compute per-band kernel sizes
+
     band_k = compute_band_kernel_sizes(stats, centroids, binarized.shape[0],
                                       num_bands=num_bands,
                                       area_thresh=area_thresh,
                                       scale_factor=scale_factor,
                                       min_k=min_k, max_k=max_k,
                                       density_shrink_coeff=density_shrink_coeff)
-    print("Sample band kernels:", band_k[:8], "...", band_k[-6:])
+                                      
+    
+    print("All band kernel sizes:", band_k)
 
-    # Dynamic closing
+
     closed_dynamic = dynamic_closing_by_bands(binarized, band_k, overlap=overlap)
     cv2.imshow("3. Dynamic Closing (by bands)", closed_dynamic); cv2.waitKey(0)
 
-    # Connected components post-closing -> filter small
     num_labels2, labels2, stats2, centroids2 = cv2.connectedComponentsWithStats(closed_dynamic, connectivity=8)
     refined = closed_dynamic.copy()
     for i in range(1, num_labels2):
@@ -196,3 +184,21 @@ def main():
 
 if __name__ == "__main__":
     main()
+
+
+
+# Contrast normalization (CLAHE).
+
+# Estimate background via large closing, get foreground via image difference.
+
+# Smooth & Otsu threshold → binary image.
+
+# Small opening to remove specks.
+
+# Connected components to compute statistics (size/centroid).
+
+# Compute per-band kernel sizes based on component heights and density. (core adaptive logic)
+
+# Apply closing per horizontal band using per-band kernels (with overlap) and blend results.
+
+# Post-process: connected components + filter by area → draw boxes.
