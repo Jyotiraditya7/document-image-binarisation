@@ -43,19 +43,22 @@ def compute_band_kernel_sizes(stats, centroids, img_h,
     band_kernel_sizes = []
     band_h = img_h / num_bands
     global_med = np.median(comp_heights)
+    densities = []
 
     for b in range(num_bands):
         y0 = b * band_h
         y1 = (b + 1) * band_h
         mask = (comp_centroids_y >= y0) & (comp_centroids_y < y1)
         n_in_band = int(mask.sum())
-        if n_in_band >= 1:
+
+        if n_in_band >= 2:
             med_h = np.median(comp_heights[mask])
             density = n_in_band / band_h
         else:
             med_h = global_med
             density = 0.0
 
+        densities.append(density)
         k = float(med_h) * scale_factor
         shrink_scale = 1.0 / (1.0 + density_shrink_coeff * density * 50.0)
         k = k * shrink_scale
@@ -63,10 +66,18 @@ def compute_band_kernel_sizes(stats, centroids, img_h,
         k = oddize(k)
         band_kernel_sizes.append(k)
 
-    smoothed = smooth_list(band_kernel_sizes, kernel=5)
-    smoothed = np.clip(smoothed, min_k, max_k)
-    smoothed = [oddize(x) for x in smoothed]
+    # --- NEW: weighted smoothing by density (to avoid spiky bands) ---
+    smoothed = []
+    for i in range(num_bands):
+        w_sum, k_sum = 0, 0
+        for j in range(max(0, i - 2), min(num_bands, i + 3)):
+            w = densities[j] + 0.2  # ensure small weight even for empty bands
+            k_sum += w * band_kernel_sizes[j]
+            w_sum += w
+        smoothed.append(oddize(k_sum / w_sum))
+
     return smoothed
+
 
 def dynamic_closing_by_bands(gray_img, band_kernel_sizes, overlap=0.30):
     h, w = gray_img.shape[:2]
@@ -76,26 +87,25 @@ def dynamic_closing_by_bands(gray_img, band_kernel_sizes, overlap=0.30):
 
     for b in range(num_bands):
         ksize = int(band_kernel_sizes[b])
-        start = int(round(max(0, (b - overlap) * band_h)))
-        end = int(round(min(h, (b + 1 + overlap) * band_h)))
+        local_overlap = overlap + 0.15 * (ksize / max(band_kernel_sizes))  # adapt overlap by kernel size
+        start = int(round(max(0, (b - local_overlap) * band_h)))
+        end = int(round(min(h, (b + 1 + local_overlap) * band_h)))
         if end <= start:
             continue
-        band_slice = gray_img[start:end]
+        band_slice = gray_img[start:end].copy()
 
-        k_w = max(3, ksize // 2)
-        k_h = max(3, ksize)
-        k_w = oddize(k_w)
-        k_h = oddize(k_h)
-
+        k_w = oddize(max(3, ksize // 2))
+        k_h = oddize(max(3, ksize))
         kernel = cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (k_w, k_h))
         closed = cv2.morphologyEx(band_slice, cv2.MORPH_CLOSE, kernel)
         out[start:end] = np.maximum(out[start:end], closed)
 
     return out
 
+
 def main():
     # ----- Adaptive parameters based on image -----
-    image_path = "images/tilted.jpg"
+    image_path = "images/shadow_bottom.jpg"
     img = cv2.imread(image_path)
     if img is None:
         raise SystemExit(f"Failed to read '{image_path}' — check file path.")
@@ -112,12 +122,12 @@ def main():
     cv2.imshow("0. CLAHE", gray_eq); cv2.waitKey(0)
 
     # Coarse background removal
-    kernel_init_size = max(15, min(h, w)//20)
-    kernel_init = cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (kernel_init_size, kernel_init_size))
+    kernel_init = cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (25, 25))
     bg_init = cv2.morphologyEx(gray_eq, cv2.MORPH_CLOSE, kernel_init)
     diff = cv2.absdiff(gray_eq, bg_init)
     norm_img = cv2.normalize(diff, None, 0, 255, cv2.NORM_MINMAX)
-    cv2.imshow("1. Shadow Removed (norm)", norm_img); cv2.waitKey(0)
+    cv2.imshow("1. Shadow Removed (norm)", norm_img)
+    cv2.waitKey(0)
 
     # Smooth + binarize
     blurred = cv2.GaussianBlur(norm_img, (5, 5), 0)
