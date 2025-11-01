@@ -94,7 +94,7 @@ def dynamic_closing_by_bands(gray_img, band_kernel_sizes, overlap=0.30):
 
 
 def main():
-    image_path = "images/shadow_side.jpg"
+    image_path = "dataset/Train_Data/3030.jpg"
     img = cv2.imread(image_path)
     if img is None:
         raise SystemExit(f"Failed to read '{image_path}' — check file path.")
