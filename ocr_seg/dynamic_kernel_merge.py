@@ -94,7 +94,7 @@ def dynamic_closing_by_bands(gray_img, band_kernel_sizes, overlap=0.30):
 
 
 def main():
-    image_path = "images/blur.jpg"
+    image_path = "images/shadow_side.jpg"
     img = cv2.imread(image_path)
     if img is None:
         raise SystemExit(f"Failed to read '{image_path}' — check file path.")
@@ -124,10 +124,8 @@ def main():
 
     num_labels, labels, stats, centroids = cv2.connectedComponentsWithStats(binarized, connectivity=8)
 
-
     median_area = np.median(stats[1:, cv2.CC_STAT_AREA])
     area_thresh = max(5, median_area * 0.05)
-
 
     median_height = np.median(stats[1:, cv2.CC_STAT_HEIGHT])
     scale_factor = min(0.8, max(0.3, median_height / 50.0))
@@ -138,7 +136,6 @@ def main():
     overlap = 0.30
     min_area_keep = max(500, median_area * 0.5)
 
-
     band_k = compute_band_kernel_sizes(stats, centroids, binarized.shape[0],
                                       num_bands=num_bands,
                                       area_thresh=area_thresh,
@@ -146,9 +143,7 @@ def main():
                                       min_k=min_k, max_k=max_k,
                                       density_shrink_coeff=density_shrink_coeff)
 
-
     print("All band kernel sizes:", band_k)
-
 
     closed_dynamic = dynamic_closing_by_bands(binarized, band_k, overlap=overlap)
     cv2.imshow("3. Dynamic Closing (by bands)", closed_dynamic); cv2.waitKey(0)
@@ -162,7 +157,6 @@ def main():
 
     output = cv2.cvtColor(refined, cv2.COLOR_GRAY2BGR)
 
-
     boxes = []
     for i in range(1, num_labels2):
         x, y, w, h, area = stats2[i]
@@ -175,10 +169,10 @@ def main():
 
     output = cv2.cvtColor(refined, cv2.COLOR_GRAY2BGR)
 
-
     horizontal_gap_threshold = 35
-    vertical_overlap_ratio_min = 0.6
-    line_grouping_tolerance = 0.6
+    vertical_overlap_ratio_min = 0.1
+    line_grouping_tolerance = 0.9
+    
     # Group boxes by vertical alignment (same text line)
     lines = []
     for box in boxes:
@@ -221,7 +215,7 @@ def main():
             nx, ny, nw, nh = next_box
             x2, nx2 = x + w, nx + nw
 
-            # Check horizontal relationship (FIXED)
+            # Check horizontal relationship
             horizontal_gap = nx - x2  # Positive = gap, Negative = overlap
             horizontal_overlap = max(0, x2 - nx)  # How much they overlap horizontally
             
@@ -251,6 +245,27 @@ def main():
 
     print("Final merged box count:", len(final_boxes))
 
+    # --- NEW: Filter out very small boxes based on average area ---
+    if len(final_boxes) > 0:
+        final_box_areas = [b[2] * b[3] for b in final_boxes]
+        avg_area = np.mean(final_box_areas)
+        median_area_final = np.median(final_box_areas)
+        
+        min_area_ratio = 0.1  # <-- ADJUST: 0.05 = 5%, 0.1 = 10%, 0.02 = 2%
+        min_final_area = avg_area * min_area_ratio
+        
+        filtered_boxes = [b for b in final_boxes if (b[2] * b[3]) >= min_final_area]
+        
+        removed_count = len(final_boxes) - len(filtered_boxes)
+        if removed_count > 0:
+            print(f"\nFiltered out {removed_count} very small boxes:")
+            print(f"  Average final box area: {avg_area:.0f}px²")
+            print(f"  Median final box area: {median_area_final:.0f}px²")
+            print(f"  Min area threshold (5% of avg): {min_final_area:.0f}px²")
+        
+        final_boxes = filtered_boxes
+        print(f"Final box count after small box filtering: {len(final_boxes)}")
+
     # Draw final merged boxes in white
     for (x, y, w, h) in final_boxes:
         cv2.rectangle(output, (x, y), (x + w, y + h), (255, 255, 255), 2)
@@ -272,17 +287,10 @@ if __name__ == "__main__":
 
 
 # Contrast normalization (CLAHE).
-
 # Estimate background via large closing, get foreground via image difference.
-
 # Smooth & Otsu threshold → binary image.
-
 # Small opening to remove specks.
-
 # Connected components to compute statistics (size/centroid).
-
 # Compute per-band kernel sizes based on component heights and density. (core adaptive logic)
-
 # Apply closing per horizontal band using per-band kernels (with overlap) and blend results.
-
 # Post-process: connected components + filter by area → draw boxes.
