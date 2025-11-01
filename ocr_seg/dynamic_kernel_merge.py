@@ -94,7 +94,7 @@ def dynamic_closing_by_bands(gray_img, band_kernel_sizes, overlap=0.30):
 
 
 def main():
-    image_path = "images/shadow_side.jpg"
+    image_path = "images/blur.jpg"
     img = cv2.imread(image_path)
     if img is None:
         raise SystemExit(f"Failed to read '{image_path}' — check file path.")
@@ -145,8 +145,8 @@ def main():
                                       scale_factor=scale_factor,
                                       min_k=min_k, max_k=max_k,
                                       density_shrink_coeff=density_shrink_coeff)
-                                      
-    
+
+
     print("All band kernel sizes:", band_k)
 
 
@@ -175,41 +175,70 @@ def main():
 
     output = cv2.cvtColor(refined, cv2.COLOR_GRAY2BGR)
 
-        # --- Step: Line-wise horizontal merging (replaces old merge) ---
+
+    horizontal_gap_threshold = 35
+    vertical_overlap_ratio_min = 0.6
+    line_grouping_tolerance = 0.6
     # Group boxes by vertical alignment (same text line)
     lines = []
     for box in boxes:
         x, y, w, h = box
+        box_center_y = y + h / 2
         placed = False
+        
         for line in lines:
-            ly_min = min(b[1] for b in line)
-            ly_max = max(b[1] + b[3] for b in line)
-            # If box overlaps vertically with this line
-            if y <= ly_max and y + h >= ly_min:
+            # Calculate line's vertical range with tolerance
+            line_y_centers = [b[1] + b[3]/2 for b in line]
+            line_heights = [b[3] for b in line]
+            line_center_y = sum(line_y_centers) / len(line_y_centers)
+            avg_line_height = sum(line_heights) / len(line_heights)
+            
+            # Check if box center is within tolerance of line center
+            vertical_distance = abs(box_center_y - line_center_y)
+            tolerance = avg_line_height * line_grouping_tolerance
+            
+            if vertical_distance <= tolerance:
                 line.append(box)
                 placed = True
                 break
+        
         if not placed:
             lines.append([box])
+    
+    print(f"\nGrouped into {len(lines)} lines:")
 
     # Merge horizontally within each line
     final_boxes = []
     for line in lines:
+        if len(line) == 0:
+            continue
+            
         line = sorted(line, key=lambda b: b[0])  # sort left to right
         current = line[0]
+        
         for next_box in line[1:]:
             x, y, w, h = current
             nx, ny, nw, nh = next_box
             x2, nx2 = x + w, nx + nw
 
-            # Horizontal gap and vertical overlap check
-            horizontal_gap = nx - x2
+            # Check horizontal relationship (FIXED)
+            horizontal_gap = nx - x2  # Positive = gap, Negative = overlap
+            horizontal_overlap = max(0, x2 - nx)  # How much they overlap horizontally
+            
+            # Check vertical overlap
             vertical_overlap = max(0, min(y + h, ny + nh) - max(y, ny))
             min_h = min(h, nh)
-            vertical_overlap_ratio = vertical_overlap / float(min_h)
+            vertical_overlap_ratio = vertical_overlap / float(min_h) if min_h > 0 else 0
 
-            # Merge if same line (overlap vertically) and touching horizontally
-            if vertical_overlap_ratio > 0.1 and horizontal_gap <= 5:
+            # Merge if:
+            # 1. Good vertical overlap (on same line)
+            # 2. Horizontally overlapping OR touching OR small gap
+            vertical_ok = vertical_overlap_ratio > vertical_overlap_ratio_min
+            horizontal_ok = (horizontal_overlap > 0 or  # Overlapping
+                           horizontal_gap <= 0 or       # Touching
+                           horizontal_gap <= horizontal_gap_threshold)  # Small gap
+            
+            if vertical_ok and horizontal_ok:
                 new_x = min(x, nx)
                 new_y = min(y, ny)
                 new_x2 = max(x2, nx2)
@@ -222,10 +251,9 @@ def main():
 
     print("Final merged box count:", len(final_boxes))
 
-    # Draw final merged boxes in blue
+    # Draw final merged boxes in white
     for (x, y, w, h) in final_boxes:
         cv2.rectangle(output, (x, y), (x + w, y + h), (255, 255, 255), 2)
-    
 
     cv2.imshow("Final Merged Horizontally", output)
     cv2.waitKey(0)
@@ -241,7 +269,6 @@ def main():
 
 if __name__ == "__main__":
     main()
-
 
 
 # Contrast normalization (CLAHE).
