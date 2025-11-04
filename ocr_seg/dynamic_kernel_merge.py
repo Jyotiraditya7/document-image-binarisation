@@ -94,7 +94,7 @@ def dynamic_closing_by_bands(gray_img, band_kernel_sizes, overlap=0.30):
 
 
 def main():
-    image_path = "images/shadow_side.jpg"
+    image_path = "images/46219.jpg"
     img = cv2.imread(image_path)
     if img is None:
         raise SystemExit(f"Failed to read '{image_path}' — check file path.")
@@ -142,6 +142,18 @@ def main():
                                       scale_factor=scale_factor,
                                       min_k=min_k, max_k=max_k,
                                       density_shrink_coeff=density_shrink_coeff)
+    vis_bands = cv2.cvtColor(binarized, cv2.COLOR_GRAY2BGR)
+    h, w = vis_bands.shape[:2]
+    band_h = h / num_bands
+
+    for b in range(num_bands):
+        y = int(round(b * band_h))
+        cv2.line(vis_bands, (0, y), (w, y), (0, 0, 255), 2)
+        cv2.putText(vis_bands, f"{b+1}:{band_k[b]}", (10, y + 20),
+                    cv2.FONT_HERSHEY_SIMPLEX, 0.5, (255, 255, 255), 1)
+
+    cv2.imshow("Horizontal Bands (debug only)", vis_bands)
+    cv2.waitKey(0)
 
     print("All band kernel sizes:", band_k)
 
@@ -169,8 +181,8 @@ def main():
 
     output = cv2.cvtColor(refined, cv2.COLOR_GRAY2BGR)
 
-    horizontal_gap_threshold = 35
-    vertical_overlap_ratio_min = 0.1
+    horizontal_gap_threshold = 30
+    vertical_overlap_ratio_min = 0.4
     line_grouping_tolerance = 0.9
     
     
