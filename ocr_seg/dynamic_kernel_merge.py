@@ -173,7 +173,7 @@ def main():
     vertical_overlap_ratio_min = 0.1
     line_grouping_tolerance = 0.9
     
-    # Group boxes by vertical alignment (same text line)
+    
     lines = []
     for box in boxes:
         x, y, w, h = box
@@ -181,13 +181,13 @@ def main():
         placed = False
         
         for line in lines:
-            # Calculate line's vertical range with tolerance
+            
             line_y_centers = [b[1] + b[3]/2 for b in line]
             line_heights = [b[3] for b in line]
             line_center_y = sum(line_y_centers) / len(line_y_centers)
             avg_line_height = sum(line_heights) / len(line_heights)
             
-            # Check if box center is within tolerance of line center
+            
             vertical_distance = abs(box_center_y - line_center_y)
             tolerance = avg_line_height * line_grouping_tolerance
             
@@ -201,13 +201,13 @@ def main():
     
     print(f"\nGrouped into {len(lines)} lines:")
 
-    # Merge horizontally within each line
+    
     final_boxes = []
     for line in lines:
         if len(line) == 0:
             continue
             
-        line = sorted(line, key=lambda b: b[0])  # sort left to right
+        line = sorted(line, key=lambda b: b[0])  
         current = line[0]
         
         for next_box in line[1:]:
@@ -215,22 +215,22 @@ def main():
             nx, ny, nw, nh = next_box
             x2, nx2 = x + w, nx + nw
 
-            # Check horizontal relationship
-            horizontal_gap = nx - x2  # Positive = gap, Negative = overlap
-            horizontal_overlap = max(0, x2 - nx)  # How much they overlap horizontally
             
-            # Check vertical overlap
+            horizontal_gap = nx - x2  
+            horizontal_overlap = max(0, x2 - nx)  
+            
+            
             vertical_overlap = max(0, min(y + h, ny + nh) - max(y, ny))
             min_h = min(h, nh)
             vertical_overlap_ratio = vertical_overlap / float(min_h) if min_h > 0 else 0
 
-            # Merge if:
-            # 1. Good vertical overlap (on same line)
-            # 2. Horizontally overlapping OR touching OR small gap
+            
+            
+            
             vertical_ok = vertical_overlap_ratio > vertical_overlap_ratio_min
-            horizontal_ok = (horizontal_overlap > 0 or  # Overlapping
-                           horizontal_gap <= 0 or       # Touching
-                           horizontal_gap <= horizontal_gap_threshold)  # Small gap
+            horizontal_ok = (horizontal_overlap > 0 or  
+                           horizontal_gap <= 0 or       
+                           horizontal_gap <= horizontal_gap_threshold)  
             
             if vertical_ok and horizontal_ok:
                 new_x = min(x, nx)
@@ -245,13 +245,13 @@ def main():
 
     print("Final merged box count:", len(final_boxes))
 
-    # --- NEW: Filter out very small boxes based on average area ---
+    
     if len(final_boxes) > 0:
         final_box_areas = [b[2] * b[3] for b in final_boxes]
         avg_area = np.mean(final_box_areas)
         median_area_final = np.median(final_box_areas)
         
-        min_area_ratio = 0.1  # <-- ADJUST: 0.05 = 5%, 0.1 = 10%, 0.02 = 2%
+        min_area_ratio = 0.1  
         min_final_area = avg_area * min_area_ratio
         
         filtered_boxes = [b for b in final_boxes if (b[2] * b[3]) >= min_final_area]
@@ -266,7 +266,7 @@ def main():
         final_boxes = filtered_boxes
         print(f"Final box count after small box filtering: {len(final_boxes)}")
 
-    # Draw final merged boxes in white
+    
     for (x, y, w, h) in final_boxes:
         cv2.rectangle(output, (x, y), (x + w, y + h), (255, 255, 255), 2)
 
@@ -286,11 +286,10 @@ if __name__ == "__main__":
     main()
 
 
-# Contrast normalization (CLAHE).
-# Estimate background via large closing, get foreground via image difference.
-# Smooth & Otsu threshold → binary image.
-# Small opening to remove specks.
-# Connected components to compute statistics (size/centroid).
-# Compute per-band kernel sizes based on component heights and density. (core adaptive logic)
-# Apply closing per horizontal band using per-band kernels (with overlap) and blend results.
-# Post-process: connected components + filter by area → draw boxes.
+
+
+
+
+
+
+

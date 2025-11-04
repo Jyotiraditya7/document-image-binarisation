@@ -187,18 +187,17 @@ if __name__ == "__main__":
 
 
 
-# Contrast normalization (CLAHE).
 
-# Estimate background via large closing, get foreground via image difference.
 
-# Smooth & Otsu threshold → binary image.
 
-# Small opening to remove specks.
 
-# Connected components to compute statistics (size/centroid).
 
-# Compute per-band kernel sizes based on component heights and density. (core adaptive logic)
 
-# Apply closing per horizontal band using per-band kernels (with overlap) and blend results.
 
-# Post-process: connected components + filter by area → draw boxes.
+
+
+
+
+
+
+
